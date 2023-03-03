@@ -21,9 +21,9 @@ class Client:
     def thread(self):
         if self.username is not None:
             # create new listening thread for when new message streams come in
-            threading.Thread(target=self.__listen_for_messages, daemon=True).start()
+            threading.Thread(target=self.__listen_for_server_messages, daemon=True).start()
 
-    def __listen_for_messages(self):
+    def __listen_for_server_messages(self):
         """
         This method will be ran in a separate thread as the main/ui thread, because the for-in call is blocking
         when waiting for new messages
