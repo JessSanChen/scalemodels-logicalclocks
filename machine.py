@@ -28,14 +28,23 @@ class Machine:
         #add delay to initialize the server-side logic on all processes
         time.sleep(5)
 
-        # consumer puts messages in
-        # producer "receives" messages by reading messages from this queue
-        prod1 = Thread(target=self.producer, args=(config[2],)) 
-        prod1.start()
+        # producers "receive" messages by connecting sockets to other ports
+        self.prod1 = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        self.port1 = int(config[2])
+        try:
+            self.prod1.connect(self.host, self.port1)
+            print("Client-side connection success to port val:" + str(self.port1) + "\n")
+        except socket.error as e:
+            print ("Error connecting producer: %s" % e)
 
-        # create 2 consumers for each of the other 2 ports?
-        prod2 = Thread(target=self.producer, args=(config[3],)) 
-        prod2.start()
+        self.prod2 = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        self.port2 = int(config[3])
+        try:
+            self.prod2.connect(self.host, self.port2)
+            print("Client-side connection success to port val:" + str(self.port2) + "\n")
+        except socket.error as e:
+            print ("Error connecting producer: %s" % e)
+
 
 
     def init_machine(self): # receive function, essentially
@@ -68,42 +77,21 @@ class Machine:
             # network queue
             self.queue.append(dataVal)
 
-    def producer(self,portVal):
-        host= self.host
-        port = int(portVal) 
-        s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        sleepVal = 0.500
-        #sema acquire
-        try:
-            s.connect((host,port))
-            print("Client-side connection success to port val:" + str(portVal) + "\n")
 
-            # send message
-            while True:
-                # codeVal = str(code) # global code variable, randInt(1,3) in machine
-                # time.sleep(sleepVal)
-                # s.send(codeVal.encode('ascii'))
-                # print("msg sent", codeVal)
-
-                if self.queue.empty():
-                    rng = random.randInt(1,10)
-                    time.sleep(self.rate)
-                    if rng == 1: 
-                        # send to one of other machines
-                        msg = str(self.clock)
-                        s.send(msg.encode('ascii'))
-                        print("msg sent", msg)
-
-                        # update own logical clock
-                        self.clock += 1
-
-                        # update log with send, system time, logical clock time
-                        # TODO 
-                    elif rng == 2:
-                        
-
+    def start(self):
         
-        except socket.error as e:
-            print ("Error connecting producer: %s" % e)
- 
- 
+        if self.queue.empty():
+            rng = random.randInt(1,10)
+            time.sleep(self.rate)
+            if rng == 1: 
+                # send to one of other machines
+                msg = str(self.clock)
+                s.send(msg.encode('ascii'))
+                print("msg sent", msg)
+
+                # update own logical clock
+                self.clock += 1
+
+                # update log with send, system time, logical clock time
+                # TODO 
+            elif rng == 2:
