@@ -102,6 +102,7 @@ if __name__ == '__main__':
     
 
     config1=[localHost, port1, port2, port3]
+    m1 = Machine
     p1 = Process(target=machine, args=(config1,))
     config2=[localHost, port2, port1, port3]
     p2 = Process(target=machine, args=(config2,))

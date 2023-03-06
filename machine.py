@@ -6,6 +6,7 @@ from threading import Thread
 import socket
 import time
 import queue
+from multiprocessing import Process
 
 class Machine:
 
@@ -13,7 +14,7 @@ class Machine:
 
         config.append(os.getpid()) # get current process id
 
-        self.rate = float(1/random.randInt(1,6))
+        self.rate = float(1/random.randint(1,6))
         self.host = str(config[0])
         self.port = int(config[1])
         self.config = config
@@ -75,23 +76,71 @@ class Machine:
             print("msg received:", dataVal)
 
             # network queue
-            self.queue.append(dataVal)
+            self.queue.put(dataVal)
 
 
     def start(self):
-        
-        if self.queue.empty():
-            rng = random.randInt(1,10)
+        while True:
             time.sleep(self.rate)
-            if rng == 1: 
-                # send to one of other machines
-                msg = str(self.clock)
-                s.send(msg.encode('ascii'))
-                print("msg sent", msg)
-
-                # update own logical clock
+            if not self.queue.empty():
+                msg = self.queue.get()
                 self.clock += 1
+                # write to log: received, global time, length of queue, logical clock time
+            else:
+                rng = random.randint(1,10)
+                time.sleep(self.rate)
+                if rng == 1: # send to one of other machines
+                    msg = str(self.clock)
+                    self.prod1.send(msg.encode('ascii'))
+                    print("msg sent", msg)
+                    self.clock += 1
 
-                # update log with send, system time, logical clock time
-                # TODO 
-            elif rng == 2:
+                    # write log with send, system time, logical clock time
+                elif rng == 2: # send to other machine
+                    # send to one of other machines
+                    msg = str(self.clock)
+                    self.prod2.send(msg.encode('ascii'))
+                    print("msg sent", msg)
+                    self.clock += 1
+
+                    # write log with send, system time, logical clock time
+                elif rng == 3: # send to both other machines
+                    # send to one of other machines
+                    msg = str(self.clock)
+                    self.prod1.send(msg.encode('ascii'))
+                    self.prod2.send(msg.encode('ascii'))
+                    print("msg sent", msg)
+                    self.clock += 1
+
+                    # write log with send, system time, logical clock time
+                else: # internal event
+                    self.clock += 1
+                    # log internal event, system time, logical clock value
+                
+
+
+if __name__ == '__main__':
+    localHost= "127.0.0.1"
+
+    port1 = 2056
+    port2 = 3056
+    port3 = 4056
+
+    config1=[localHost, port1, port2, port3]
+    m1 = Machine(config1)
+    config2=[localHost, port2, port1, port3]
+    m2 = Machine(config2)
+    config3=[localHost, port3, port1, port2]
+    m3 = Machine(config3)    
+    
+    p1 = Process(target=m1.start)
+    p2 = Process(target=m2.start)
+    p3 = Process(target=m3.start)
+
+    p1.start()
+    p2.start()
+    p3.start()
+
+    p1.join()
+    p2.join()
+    p3.join()
