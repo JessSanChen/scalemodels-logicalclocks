@@ -22,31 +22,6 @@ class Machine:
 
         self.queue = queue.SimpleQueue # network queue
 
-        # init listening thread on home port
-        init_thread = Thread(target=self.init_machine)
-        init_thread.start()
-
-        #add delay to initialize the server-side logic on all processes
-        time.sleep(5)
-
-        # producers "receive" messages by connecting sockets to other ports
-        self.prod1 = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        self.port1 = int(config[2])
-        try:
-            self.prod1.connect(self.host, self.port1)
-            print("Client-side connection success to port val:" + str(self.port1) + "\n")
-        except socket.error as e:
-            print ("Error connecting producer: %s" % e)
-
-        self.prod2 = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        self.port2 = int(config[3])
-        try:
-            self.prod2.connect(self.host, self.port2)
-            print("Client-side connection success to port val:" + str(self.port2) + "\n")
-        except socket.error as e:
-            print ("Error connecting producer: %s" % e)
-
-
 
     def init_machine(self): # receive function, essentially
         HOST = self.host
@@ -78,17 +53,39 @@ class Machine:
             # network queue
             self.queue.put(dataVal)
 
-
     def start(self):
+        # init listening thread on home port
+        init_thread = Thread(target=self.init_machine)
+        init_thread.start()
+
+        #add delay to initialize the server-side logic on all processes
+        time.sleep(5)
+
+        # producers "receive" messages by connecting sockets to other ports
+        self.prod1 = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        self.port1 = int(self.config[2])
+        try:
+            self.prod1.connect((self.host, self.port1))
+            print("Client-side connection success to port val:" + str(self.port1) + "\n")
+        except socket.error as e:
+            print ("Error connecting producer: %s" % e)
+
+        self.prod2 = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        self.port2 = int(self.config[3])
+        try:
+            self.prod2.connect((self.host, self.port2))
+            print("Client-side connection success to port val:" + str(self.port2) + "\n")
+        except socket.error as e:
+            print ("Error connecting producer: %s" % e)
+
         while True:
             time.sleep(self.rate)
-            if not self.queue.empty():
+            if self.queue().qsize() > 0:
                 msg = self.queue.get()
                 self.clock += 1
                 # write to log: received, global time, length of queue, logical clock time
             else:
                 rng = random.randint(1,10)
-                time.sleep(self.rate)
                 if rng == 1: # send to one of other machines
                     msg = str(self.clock)
                     self.prod1.send(msg.encode('ascii'))
@@ -117,7 +114,6 @@ class Machine:
                     self.clock += 1
                     # log internal event, system time, logical clock value
                 
-
 
 if __name__ == '__main__':
     localHost= "127.0.0.1"

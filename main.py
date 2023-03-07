@@ -101,12 +101,11 @@ if __name__ == '__main__':
     port3 = 4056
     
 
-    config1=[localHost, port1, port2, port3]
-    m1 = Machine
+    config1=[localHost, port1, port2]
     p1 = Process(target=machine, args=(config1,))
-    config2=[localHost, port2, port1, port3]
+    config2=[localHost, port2, port1]
     p2 = Process(target=machine, args=(config2,))
-    config3=[localHost, port3, port1, port2]
+    config3=[localHost, port3, port1]
     p3 = Process(target=machine, args=(config3,))
     
 
