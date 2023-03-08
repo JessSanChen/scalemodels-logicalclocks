@@ -37,12 +37,13 @@ class Machine:
         print("starting server| port val:", PORT)
 
         # create socket, bind to host and port
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind((HOST, PORT))
-        s.listen()
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # self.s = self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.s.bind((HOST, PORT))
+        self.s.listen()
 
         while True:
-            conn, _ = s.accept() # all must connect first, then start receiving
+            conn, _ = self.s.accept() # all must connect first, then start receiving
             start_new_thread(self.consumer, (conn,))
     
     def consumer(self, conn): # called when starting new thread
@@ -57,6 +58,7 @@ class Machine:
     def producer(self):
         # producers "receive" messages by connecting sockets to other ports
         self.prod1 = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        # self.prod1 = self.prod1.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.port1 = int(self.config[2])
 
         try:
@@ -66,6 +68,7 @@ class Machine:
             print ("Error connecting producer: %s" % e)
 
         self.prod2 = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        # self.prod2 = self.prod2.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.port2 = int(self.config[3])
 
         try:
@@ -119,6 +122,9 @@ class Machine:
                 machines[self.number][1].append(self.clock[1])
                 machines[self.number][2].append(self.clock[2])
             f.close()
+            # self.s.shutdown(socket.SHUT_RDWR) 
+            # self.prod1.shutdown(socket.SHUT_RDWR) 
+            # self.prod2.shutdown(socket.SHUT_RDWR) 
         return
 
             
@@ -153,20 +159,181 @@ class Machine:
 
 class Test:
 
-    def __init__(self, config1,config2,config3):
-        self.config1 = config1
-        self.config2 = config2
-        self.config3 = config3
+    def __init__(self):
+        # self.config1 = config1
+        # self.config2 = config2
+        # self.config3 = config3
+
+        self.test_synch_rate0_error = []
+        self.test_synch_rate1_error = []
+        self.test_synch_rate2_error = []
+
+    def test_synch_rate2(self,config):
+        # all machines synchronized at 1 op/sec
+        # m0 sends to m1, m1 sends to both m0 and m2, m2 internal only
+        # m2 starts first, then m0
+
+        m0 = Machine(config[0], 0,1,1,"sync2first")
+        m1 = Machine(config[1], 1,1,3,"sync2first")
+        m2 = Machine(config[2], 2,1,5,"sync2first") 
+        
+        try:
+            p1 = Process(target=m0.start)
+            p2 = Process(target=m1.start)
+            p3 = Process(target=m2.start)
+
+            p3.start()
+            time.sleep(0.2)
+            p1.start()
+            time.sleep(0.2)
+            p2.start()
+
+            p1.join(timeout=duration)
+            p2.join(timeout=duration)
+            p3.join(timeout=duration)
+
+            p1.terminate()
+            p2.terminate()
+            p3.terminate()
 
 
-    def test_synch_rate(self):
+        except KeyboardInterrupt:
+            p1.terminate()
+            p2.terminate()
+            p3.terminate()
+
+        success = True
+        m0expected = [[1, 0, 0],[2, 0, 0],[3, 0, 0],[4, 0, 0],[5, 0, 0]]
+        m1expected = [[1, 1, 1],[2, 2, 2],[3, 3, 3],[4, 4, 4],[5, 5, 5]]
+        m2expected = [[0, 0, 1],[0, 0, 2],[0, 0, 3],[0, 0, 4],[0, 0, 5]]
+
+        with open("sync2firstm0.txt","r") as f0:
+            clock = []
+            for line in f0:
+                linelist = line.split(",")
+                lineclock = list(map(int,linelist[3].split("|")[:3]))
+                clock.append(lineclock)
+            print(clock)
+            if clock != m0expected:
+                success = False
+                self.test_synch_rate2_error.append("m0 does not match expected")
+            else: 
+                self.test_synch_rate2_error.append("m0 matches as expected")
+        with open("sync2firstm1.txt","r") as f1:
+            clock = []
+            for line in f1:
+                linelist = line.split(",")
+                lineclock = list(map(int,linelist[3].split("|")[:3]))
+                clock.append(lineclock)
+            print(clock)
+            if clock != m1expected:
+                success = False
+                self.test_synch_rate2_error.append("m1 does not match expected")
+            else: 
+                self.test_synch_rate2_error.append("m1 matches as expected")
+        with open("sync2firstm2.txt","r") as f2:
+            clock = []
+            for line in f2:
+                linelist = line.split(",")
+                lineclock = list(map(int,linelist[3].split("|")[:3]))
+                clock.append(lineclock)
+            print(clock)
+            if clock != m2expected:
+                success = False
+                self.test_synch_rate2_error.append("m2 does not match expected")
+            else: 
+                self.test_synch_rate2_error.append("m2 matches as expected")
+
+        return success
+
+
+    def test_synch_rate1(self,config):
+        # all machines synchronized at 1 op/sec
+        # m0 sends to m1, m1 sends to both m0 and m2, m2 internal only
+        # m1 starts first
+
+        m0 = Machine(config[0], 0,1,1,"sync1first")
+        m1 = Machine(config[1], 1,1,3,"sync1first")
+        m2 = Machine(config[2], 2,1,5,"sync1first") 
+        
+        try:
+            p1 = Process(target=m0.start)
+            p2 = Process(target=m1.start)
+            p3 = Process(target=m2.start)
+
+            p2.start()
+            time.sleep(0.2)
+            p1.start()
+            time.sleep(0.2)
+            p3.start()
+
+            p1.join(timeout=duration)
+            p2.join(timeout=duration)
+            p3.join(timeout=duration)
+
+            p1.terminate()
+            p2.terminate()
+            p3.terminate()
+
+
+        except KeyboardInterrupt:
+            p1.terminate()
+            p2.terminate()
+            p3.terminate()
+
+        success = True
+        m0expected = [[1, 1, 1],[2, 2, 2],[3, 3, 3],[4, 4, 4],[5, 5, 5]]
+        m1expected = [[0, 1, 0],[0, 2, 0],[0, 3, 0],[0, 4, 0],[0, 5, 0]]
+        m2expected = [[1, 1, 1],[2, 2, 2],[3, 3, 3],[4, 4, 4],[5, 5, 5]]
+
+        with open("sync1firstm0.txt","r") as f0:
+            clock = []
+            for line in f0:
+                linelist = line.split(",")
+                lineclock = list(map(int,linelist[3].split("|")[:3]))
+                clock.append(lineclock)
+            print(clock)
+            if clock != m0expected:
+                success = False
+                self.test_synch_rate1_error.append("m0 does not match expected")
+            else: 
+                self.test_synch_rate1_error.append("m0 matches as expected")
+        with open("sync1firstm1.txt","r") as f1:
+            clock = []
+            for line in f1:
+                linelist = line.split(",")
+                lineclock = list(map(int,linelist[3].split("|")[:3]))
+                clock.append(lineclock)
+            print(clock)
+            if clock != m1expected:
+                success = False
+                self.test_synch_rate1_error.append("m1 does not match expected")
+            else: 
+                self.test_synch_rate1_error.append("m1 matches as expected")
+        with open("sync1firstm2.txt","r") as f2:
+            clock = []
+            for line in f2:
+                linelist = line.split(",")
+                lineclock = list(map(int,linelist[3].split("|")[:3]))
+                clock.append(lineclock)
+            print(clock)
+            if clock != m2expected:
+                success = False
+                self.test_synch_rate1_error.append("m2 does not match expected")
+            else: 
+                self.test_synch_rate1_error.append("m2 matches as expected")
+
+        return success
+
+
+    def test_synch_rate0(self,config):
         # all machines synchronized at 1 op/sec
         # m0 sends to m1, m1 sends to both m0 and m2, m2 internal only
         # m0 starts first
 
-        m0 = Machine(config1, 0,1,1,"sync0first")
-        m1 = Machine(config2, 1,1,3,"sync0first")
-        m2 = Machine(config3, 2,1,5,"sync0first") 
+        m0 = Machine(config[0], 0,1,1,"sync0first")
+        m1 = Machine(config[1], 1,1,3,"sync0first")
+        m2 = Machine(config[2], 2,1,5,"sync0first") 
         
         try:
             p1 = Process(target=m0.start)
@@ -193,12 +360,16 @@ class Test:
             p2.terminate()
             p3.terminate()
 
+        p1.kill()
+        p2.kill()
+        p3.kill()
+
         success = True
         m0expected = [[1, 0, 0],[2, 0, 0],[3, 0, 0],[4, 0, 0],[5, 0, 0]]
         m1expected = [[1, 1, 1],[2, 2, 2],[3, 3, 3],[4, 4, 4],[5, 5, 5]]
         m2expected = [[0, 0, 1],[0, 0, 2],[0, 0, 3],[0, 0, 4],[0, 0, 5]]
 
-        with open("syncm0.txt","r") as f0:
+        with open("sync0firstm0.txt","r") as f0:
             clock = []
             for line in f0:
                 linelist = line.split(",")
@@ -207,8 +378,10 @@ class Test:
             print(clock)
             if clock != m0expected:
                 success = False
-                self.test_synch_rate_error = "m0 does not match expected"
-        with open("syncm1.txt","r") as f1:
+                self.test_synch_rate0_error.append("m0 does not match expected")
+            else: 
+                self.test_synch_rate0_error.append("m0 matches as expected")
+        with open("sync0firstm1.txt","r") as f1:
             clock = []
             for line in f1:
                 linelist = line.split(",")
@@ -217,8 +390,10 @@ class Test:
             print(clock)
             if clock != m1expected:
                 success = False
-                self.test_synch_rate_error = "m1 does not match expected"
-        with open("syncm2.txt","r") as f2:
+                self.test_synch_rate0_error.append("m1 does not match expected")
+            else: 
+                self.test_synch_rate0_error.append("m1 matches as expected")
+        with open("sync0firstm2.txt","r") as f2:
             clock = []
             for line in f2:
                 linelist = line.split(",")
@@ -227,58 +402,64 @@ class Test:
             print(clock)
             if clock != m2expected:
                 success = False
-                self.test_synch_rate_error = "m2 does not match expected"
+                self.test_synch_rate0_error.append("m2 does not match expected")
+            else: 
+                self.test_synch_rate0_error.append("m2 matches as expected")
 
         return success
+    
+
+def config(port1,port2,port3):
+    localHost= "127.0.0.1"
+    config1=[localHost, port1, port2, port3]
+    config2=[localHost, port2, port1, port3]
+    config3=[localHost, port3, port2, port1]
+    return [config1,config2,config3]
     
 
 if __name__ == '__main__':
 
     duration = 6
     
-    localHost= "127.0.0.1"
 
+    tester = Test()
+
+    # all machines synchronized at 1 op/sec
+    # m0 sends to m1, m1 sends to both m0 and m2, m2 internal only
+
+    # m0 starts first
     port1 = 2056
     port2 = 3056
     port3 = 4056
-
-    config1=[localHost, port1, port2, port3]
-    config2=[localHost, port2, port1, port3]
-    config3=[localHost, port3, port2, port1]
-
-    tester = Test(config1,config2,config3)
-
-    if tester.test_synch_rate():
-        print("synchronized machines with rolls 1, 3, 5 PASS")
+    if tester.test_synch_rate0(config(port1,port2,port3)):
+        print("synchronized machines with m0 first, rolls 1/3/5 PASS")
+        print(*(x for x in tester.test_synch_rate0_error), sep='\n')
     else: 
-        print("synchronized machines with rolls 1, 3, 5 FAIL")
-        print(tester.test_synch_rate_error)
+        print("synchronized machines with m0 first, rolls 1/3/5 FAIL")
+        print(*(x for x in tester.test_synch_rate0_error), sep='\n')
+
+    # m1 starts first
+    port1 = 2057
+    port2 = 3057
+    port3 = 4057
+    if tester.test_synch_rate1(config(port1,port2,port3)):
+        print("synchronized machines with m1 first, rolls 1/3/5 PASS")
+        print(*(x for x in tester.test_synch_rate1_error), sep='\n')
+    else: 
+        print("synchronized machines with m1 first, rolls 1/3/5 FAIL")
+        print(*(x for x in tester.test_synch_rate1_error), sep='\n')
+
+    # m2 starts first, then m0 (does not affect order compared to m0 first)
+    port1 = 2058
+    port2 = 3058
+    port3 = 4058
+    if tester.test_synch_rate2(config(port1,port2,port3)):
+        print("synchronized machines with m2 first, rolls 1/3/5 PASS")
+        print(*(x for x in tester.test_synch_rate2_error), sep='\n')
+    else: 
+        print("synchronized machines with m2 first, rolls 1/3/5 FAIL")
+        print(*(x for x in tester.test_synch_rate2_error), sep='\n')
 
     
 
-    # m0 = Machine(config1, 0,1,1)
-    # m1 = Machine(config2, 1,1,3)
-    # m2 = Machine(config3, 2,1,5)    
     
-    # try:
-    #     p1 = Process(target=m0.start)
-    #     p2 = Process(target=m1.start)
-    #     p3 = Process(target=m2.start)
-
-    #     p1.start()
-    #     p2.start()
-    #     p3.start()
-
-    #     p1.join(timeout=duration)
-    #     p2.join(timeout=duration)
-    #     p3.join(timeout=duration)
-
-    #     p1.terminate()
-    #     p2.terminate()
-    #     p3.terminate()
-
-
-    # except KeyboardInterrupt:
-    #     p1.terminate()
-    #     p2.terminate()
-    #     p3.terminate()
