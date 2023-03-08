@@ -1,5 +1,5 @@
-Internal,1.002,0,0|0|1|
-Internal,2.008,0,0|0|2|
-Internal,3.013,0,0|0|3|
-Internal,4.015,0,0|0|4|
-Internal,5.019,0,0|0|5|
+Internal,1.001,0,0|0|1|
+Internal,2.005,0,0|0|2|
+Internal,3.009,0,0|0|3|
+Internal,4.014,0,0|0|4|
+Internal,5.018,0,0|0|5|
