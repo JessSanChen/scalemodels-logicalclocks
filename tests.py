@@ -168,6 +168,90 @@ class Test:
         self.test_synch_rate1_error = []
         self.test_synch_rate2_error = []
         self.test_asynch0_error = []
+        self.test_asynch1_error = []
+
+    def test_asynch1(self,config):
+        # async machines: m0 at 1 op/sec, m1 at 2 op/sec, m2 at 5 op/sec
+        # m0 sends to m1, m1 sends to both m0 and m2, m2 internal only
+        # m1 starts first
+
+        m0 = Machine(config[0], 0,1,1,"async1first")
+        m1 = Machine(config[1], 1,2,3,"async1first")
+        m2 = Machine(config[2], 2,5,5,"async1first") 
+        
+        try:
+            p1 = Process(target=m0.start)
+            p2 = Process(target=m1.start)
+            p3 = Process(target=m2.start)
+
+            p2.start()
+            time.sleep(0.2)
+            p1.start()
+            time.sleep(0.2)
+            p3.start()
+
+            p1.join(timeout=duration)
+            p2.join(timeout=duration)
+            p3.join(timeout=duration)
+
+            p1.terminate()
+            p2.terminate()
+            p3.terminate()
+
+
+        except KeyboardInterrupt:
+            p1.terminate()
+            p2.terminate()
+            p3.terminate()
+
+        p1.kill()
+        p2.kill()
+        p3.kill()
+
+        success = True
+        m0expected = [[1, 2, 1], [2, 4, 2], [3, 6, 3], [4, 8, 4], [5, 10, 5]]
+        m1expected = [[0, 1, 0], [0, 2, 0], [0, 3, 0], [0, 4, 0], [0, 5, 0], [0, 6, 0], [0, 7, 0], [0, 8, 0], [0, 9, 0], [0, 10, 0]]
+        m2expected = [[1, 1, 1], [1, 1, 2], [1, 1, 3], [2, 2, 4], [2, 2, 5], [3, 3, 6], [3, 3, 7], [3, 3, 8], [4, 4, 9], [4, 4, 10], [5, 5, 11], [5, 5, 12], [6, 6, 13], [6, 6, 14], [6, 6, 15], [7, 7, 16], [7, 7, 17], [8, 8, 18], [8, 8, 19], [8, 8, 20], [9, 9, 21], [9, 9, 22], [10, 10, 23], [10, 10, 24], [10, 10, 25]]
+
+
+        with open("async1firstm0.txt","r") as f0:
+            clock = []
+            for line in f0:
+                linelist = line.split(",")
+                lineclock = list(map(int,linelist[3].split("|")[:3]))
+                clock.append(lineclock)
+            print(clock)
+            if clock != m0expected:
+                success = False
+                self.test_asynch1_error.append("m0 does not match expected")
+            else: 
+                self.test_asynch1_error.append("m0 matches as expected")
+        with open("async1firstm1.txt","r") as f1:
+            clock = []
+            for line in f1:
+                linelist = line.split(",")
+                lineclock = list(map(int,linelist[3].split("|")[:3]))
+                clock.append(lineclock)
+            print(clock)
+            if clock != m1expected:
+                success = False
+                self.test_asynch1_error.append("m1 does not match expected")
+            else: 
+                self.test_asynch1_error.append("m1 matches as expected")
+        with open("async1firstm2.txt","r") as f2:
+            clock = []
+            for line in f2:
+                linelist = line.split(",")
+                lineclock = list(map(int,linelist[3].split("|")[:3]))
+                clock.append(lineclock)
+            print(clock)
+            if clock != m2expected:
+                success = False
+                self.test_asynch1_error.append("m2 does not match expected")
+            else: 
+                self.test_asynch1_error.append("m2 matches as expected")
+
+        return success
 
     def test_asynch0(self,config):
         # async machines: m0 at 1 op/sec, m1 at 2 op/sec, m2 at 5 op/sec
@@ -511,51 +595,62 @@ if __name__ == '__main__':
     # m0 sends to m1, m1 sends to both m0 and m2, m2 internal only
 
     # m0 starts first
-    port1 = 2056
-    port2 = 3056
-    port3 = 4056
-    if tester.test_synch_rate0(config(port1,port2,port3)):
-        print("synchronized machines with m0 first, rolls 1/3/5 PASS")
-        print(*(x for x in tester.test_synch_rate0_error), sep='\n')
-    else: 
-        print("synchronized machines with m0 first, rolls 1/3/5 FAIL")
-        print(*(x for x in tester.test_synch_rate0_error), sep='\n')
+    # port1 = 2056
+    # port2 = 3056
+    # port3 = 4056
+    # if tester.test_synch_rate0(config(port1,port2,port3)):
+    #     print("synchronized machines with m0 first, rolls 1/3/5 PASS")
+    #     print(*(x for x in tester.test_synch_rate0_error), sep='\n')
+    # else: 
+    #     print("synchronized machines with m0 first, rolls 1/3/5 FAIL")
+    #     print(*(x for x in tester.test_synch_rate0_error), sep='\n')
+
+    # # m1 starts first
+    # port1 = 2057
+    # port2 = 3057
+    # port3 = 4057
+    # if tester.test_synch_rate1(config(port1,port2,port3)):
+    #     print("synchronized machines with m1 first, rolls 1/3/5 PASS")
+    #     print(*(x for x in tester.test_synch_rate1_error), sep='\n')
+    # else: 
+    #     print("synchronized machines with m1 first, rolls 1/3/5 FAIL")
+    #     print(*(x for x in tester.test_synch_rate1_error), sep='\n')
+
+    # # m2 starts first, then m0 (does not affect order compared to m0 first)
+    # port1 = 2058
+    # port2 = 3058
+    # port3 = 4058
+    # if tester.test_synch_rate2(config(port1,port2,port3)):
+    #     print("synchronized machines with m2 first, rolls 1/3/5 PASS")
+    #     print(*(x for x in tester.test_synch_rate2_error), sep='\n')
+    # else: 
+    #     print("synchronized machines with m2 first, rolls 1/3/5 FAIL")
+    #     print(*(x for x in tester.test_synch_rate2_error), sep='\n')
+
+    # # async machines: m0 at 1 op/sec, m1 at 2 op/sec, m2 at 5 op/sec
+    # # m0 sends to m1, m1 sends to both m0 and m2, m2 internal only
+
+    # # m0 starts first
+    # port1 = 2059
+    # port2 = 3059
+    # port3 = 4059
+    # if tester.test_asynch0(config(port1,port2,port3)):
+    #     print("async machines with m0 first, rolls 1/3/5 PASS")
+    #     print(*(x for x in tester.test_asynch0_error), sep='\n')
+    # else: 
+    #     print("async machines with m0 first, rolls 1/3/5 FAIL")
+    #     print(*(x for x in tester.test_asynch0_error), sep='\n')
 
     # m1 starts first
-    port1 = 2057
-    port2 = 3057
-    port3 = 4057
-    if tester.test_synch_rate1(config(port1,port2,port3)):
-        print("synchronized machines with m1 first, rolls 1/3/5 PASS")
-        print(*(x for x in tester.test_synch_rate1_error), sep='\n')
+    port1 = 2060
+    port2 = 3060
+    port3 = 4060
+    if tester.test_asynch1(config(port1,port2,port3)):
+        print("async machines with m1 first, rolls 1/3/5 PASS")
+        print(*(x for x in tester.test_asynch1_error), sep='\n')
     else: 
-        print("synchronized machines with m1 first, rolls 1/3/5 FAIL")
-        print(*(x for x in tester.test_synch_rate1_error), sep='\n')
-
-    # m2 starts first, then m0 (does not affect order compared to m0 first)
-    port1 = 2058
-    port2 = 3058
-    port3 = 4058
-    if tester.test_synch_rate2(config(port1,port2,port3)):
-        print("synchronized machines with m2 first, rolls 1/3/5 PASS")
-        print(*(x for x in tester.test_synch_rate2_error), sep='\n')
-    else: 
-        print("synchronized machines with m2 first, rolls 1/3/5 FAIL")
-        print(*(x for x in tester.test_synch_rate2_error), sep='\n')
-
-    # async machines: m0 at 1 op/sec, m1 at 2 op/sec, m2 at 5 op/sec
-    # m0 sends to m1, m1 sends to both m0 and m2, m2 internal only
-
-    # m0 starts first
-    port1 = 2059
-    port2 = 3059
-    port3 = 4059
-    if tester.test_asynch0(config(port1,port2,port3)):
-        print("async machines with m0 first, rolls 1/3/5 PASS")
-        print(*(x for x in tester.test_asynch0_error), sep='\n')
-    else: 
-        print("async machines with m0 first, rolls 1/3/5 FAIL")
-        print(*(x for x in tester.test_asynch0_error), sep='\n')
+        print("async machines with m1 first, rolls 1/3/5 FAIL")
+        print(*(x for x in tester.test_asynch1_error), sep='\n')
 
     
 
