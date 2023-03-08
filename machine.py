@@ -7,6 +7,10 @@ import time
 import queue
 from multiprocessing import Process
 import matplotlib.pyplot as plt
+import multiprocessing
+
+global machines
+machines = [[[],[],[],[]],[[],[],[],[]],[[],[],[],[]]]
 
 class Machine:
 
@@ -21,17 +25,12 @@ class Machine:
         self.clock = [0,0,0]
         self.number = number # id for the machine
         self.queue = [] # network queue
-        self.xlist = []
-        self.c0 = []
-        self.c1 = []
-        self.c2 = []
-
-        if self.number == 0:
-            self.file = "m0.txt"
-        elif self.number == 1:
-            self.file = "m1.txt"
-        else:
-            self.file = "m2.txt"
+        # self.xlist = []
+        # self.c0 = []
+        # self.c1 = []
+        # self.c2 = []
+        self.file = "m"+str(self.number)+".txt"
+        self.lock = multiprocessing.Lock()
 
 
     def init_machine(self): # receive function, essentially
@@ -81,7 +80,7 @@ class Machine:
             self.opened_file = f
             f.write("Opened\n")
             start = time.time()
-            while time.time() - start < 5:
+            while time.time() - start < 60:
                 time.sleep(self.rate)
                 timestr = str(round(time.time()-start,3))
                 if len(self.queue) > 0:
@@ -117,11 +116,11 @@ class Machine:
                         # log internal event, system time, logical clock value
                         action = "Internal"
                     f.write(action+"|"+timestr+"|"+str(self.clock)+"\n")
-                self.xlist.append(float(timestr))
-                self.c0.append(self.clock[0])
-                self.c1.append(self.clock[1])
-                self.c2.append(self.clock[2])
-        f.close()
+                machines[self.number][3].append(float(timestr))
+                machines[self.number][0].append(self.clock[0])
+                machines[self.number][1].append(self.clock[1])
+                machines[self.number][2].append(self.clock[2])
+            f.close()
         return
 
             
@@ -135,6 +134,19 @@ class Machine:
 
         prod_thread = Thread(target=self.producer)
         prod_thread.start()
+
+        time.sleep(70)
+        plt.plot(machines[self.number][3], machines[self.number][0], label="Machine 0")
+        plt.plot(machines[self.number][3], machines[self.number][1], label="Machine 1")
+        plt.plot(machines[self.number][3], machines[self.number][2], label="Machine 2")
+        plt.title("Machine " + str(self.number) + f" POV at {round(1/self.rate,3)} ops/sec")
+        plt.xlabel("Time")
+        plt.ylabel("Logical Clock Values") 
+        plt.legend()
+        plt.show()
+        time.sleep(20)
+
+
 
     def close_file(self):
         self.opened_file.close()
@@ -166,25 +178,9 @@ if __name__ == '__main__':
         p2.start()
         p3.start()
 
-        p1.join(timeout=10.0)
-        p2.join(timeout=10.0)
-        p3.join(timeout=10.0)
-
-        print(m0.xlist)
-        print(m0.c0)
-        print(m0.c1)
-        print(m0.c2)
-
-        
-        # logical clocks for m0
-        plt.plot(m0.xlist, m0.c0, label=f"Machine 1 at {round(m0.rate,3)} ops/sec")
-        plt.plot(m1.xlist, m1.c0, label=f"Machine 2 at {round(m1.rate,3)} ops/sec")
-        plt.plot(m2.xlist, m2.c0, label=f"Machine 3 at {round(m2.rate,3)} ops/sec")
-        plt.title("Logical Clock Rates")
-        plt.xlabel("Time")
-        plt.ylabel("Logical Clock Value") 
-        plt.legend()
-        plt.show()
+        p1.join(timeout=60)
+        p2.join(timeout=60)
+        p3.join(timeout=60)
 
         p1.terminate()
         p2.terminate()
@@ -192,24 +188,6 @@ if __name__ == '__main__':
 
 
     except KeyboardInterrupt:
-        # m0.close_file()
-        # m1.close_file()
-        # m2.close_file()
-
-        # print(m0.xlist)
-        # print(m0.c0)
-        # print(m0.c1)
-        # print(m0.c2)
-
-        # plt.plot(m0.xlist, m0.ylist, label=f"Machine 1 at {round(m0.rate,3)} ops/sec")
-        # plt.plot(m1.xlist, m1.ylist, label=f"Machine 2 at {round(m1.rate,3)} ops/sec")
-        # plt.plot(m2.xlist, m2.ylist, label=f"Machine 3 at {round(m2.rate,3)} ops/sec")
-        # plt.title("Logical Clock Rates")
-        # plt.xlabel("Time")
-        # plt.ylabel("Logical Clock Value") 
-        # plt.legend()
-        # plt.show()
-
         p1.terminate()
         p2.terminate()
         p3.terminate()
