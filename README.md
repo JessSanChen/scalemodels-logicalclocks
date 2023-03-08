@@ -1,42 +1,19 @@
 # CS262 Design Project 2
 
-## GRPC Protocol Usage and Setup: 
+## Usage and Setup: 
 
 Clone the repository on each local computer that will be using the network (all clients and the server). 
 
-### For Server:
-Run ``python3 -m server`` in base directory. If successful, you'll see a ``Starting server. Listening...``. This will allow the server to start listening to new clients that join and their commands. As clients join and make requests, important updates will be printed to the server command line. 
+### Running Experiments:
+Run ``python machine.py`` in base directory. If successful, you'll see the ports connecting and eventually a series of printouts that show the machines communicating. Once complete, .txt log files will be generated and a matplotlib module will pop up. 
 
-### For Clients:
- Run ``python3 -m client`` in base directory. 
+### Running Tests:
+Run ``python tests.py`` in base directory. This will generate several sets of processes--for each one, you will see the machine connections and communications, followed by generated log outputs as well as printouts for whether each set passes their tests.
 
-### Command Documentation:
-#### Signup and Login:
-Upon starting up the client, you'll be given the options to either sign up or log in. The prompt will specify the available commands ``Enter 1|{Username} to sign up or 2|{Username} to log in:``. 
+### Troubleshooting:
+If you encounter "TypeError: cannot pickle '_io.TextIOWrapper' object", then use a virtual environment (conda, etc) to run on Python 3.7. There seems to be a bug in the Multiprocessing package after Python 3.8.
 
-There are mechanisms in place to ensure successful login: you must enter a valid input, you can't sign up with an existing username, you can't log in to a nonexistent user, and you can't log in to a user already logged in elsewhere.
-
-Once successfully logged in, you'll be given the following command options: ``Commands: \send to send a message, \logout to log out, \list to list accounts.``
-<br/><br/>
-
-#### Sending Messages:
-To send a message, input the ``\send`` command. Then, you'll be prompted to specify a ``recipient`` and a ``message``. Both must be non-empty.
-
-If the recipient is active on the network, the message will be sent immediately. If the recipient is inactive, the message will accumulate in a queue to be sent once they log back in.
-   
-If the recipient username does not exist in the network, you will be prompted with sending a new command. 
-<br/><br/>
-
-#### Listing Accounts: 
-To list accounts, input the ``\list`` command. You will then be prompted to give a query. This query may either be empty or a string. The terminal will then print out all usernames that begin with the query.
-<br/><br/>
-
-#### Logging Out: 
-To log out, input the ``\logout`` command or ``Ctrl+C`` for a keyboard interrupt. Once logged out, the server will show that the user has the chat and the client will return to the original signup and login prompt.
-<br/><br/>
-
-#### Removing Account: 
-To log out, input the ``\delete`` command. The terminal will then prompt you for confirmation. If you confirm with ``y``, then your account will be deleted and the client will return to the original signup and login prompt.
+If you encounter "[Errno 48] Address already in use", then manually kill the processes. Find processes by running ``ps -fA | grep python``. Then, given some process 81651, for example, kill it by runnin ``kill 81651``.
 
 ## Engineering Notebook
-Nothing fancy, just a Google Doc: https://docs.google.com/document/d/17NJPauaQwWmsH5UsY-Z7gLaPGtxf13AXfBSrypogtz0/edit?usp=sharing
+Nothing fancy, just a Google Doc: https://docs.google.com/document/d/1G0VCzdG0dM1QfEQCNZVo66BfxE8sfqC0398XkFM3wLw/edit?usp=sharing
